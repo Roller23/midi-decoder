@@ -8,3 +8,6 @@ all:
 
 run:
 	./$(out)
+
+debug:
+	gdb ./$(out)
