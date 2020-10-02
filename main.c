@@ -8,6 +8,7 @@
 #define CHUNK_META_LENGTH 8
 #define CHUNK_META_NAME_LENGTH 4
 #define MAX_NOTES_HELD 10
+#define C1_NOTE 24 // starting point
 
 typedef struct __attribute__((packed)) {
   union {
@@ -63,6 +64,10 @@ typedef struct {
   const char name[5];
 } note;
 
+const char *note_names[] = {
+  NULL, "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+};
+
 void read_chunk(FILE *midi_file, chunk *_chunk) {
   memset(_chunk, 0, sizeof(chunk));
   fread(_chunk->chunk_meta, CHUNK_META_LENGTH, 1, midi_file);
@@ -105,13 +110,23 @@ uint32_t read_value(uint8_t **data) {
   return result;
 }
 
+void get_note_name(uint8_t id) {
+  uint8_t piano_key = id - C1_NOTE + 1;
+  uint8_t remainder = piano_key % 12;
+  uint8_t level = (remainder == 0) ? (piano_key / 12) : (piano_key / 12) + 1;
+  if (remainder == 0) {
+    remainder = 12;
+  }
+  char note_str[5];
+  memset(note_str, 0, 5);
+  sprintf(note_str, "%s%d", note_names[remainder], level);
+  printf("Note: %s\n", note_str);
+}
+
 void read_track(uint8_t *data, uint32_t data_length) {
   uint8_t previous_status = 0;
   uint8_t *data_start = data;
-  while (true) {
-    if (data - data_start >= data_length) {
-      break;
-    }
+  while (data - data_start < data_length) {
     uint32_t delta_time = read_value(&data);
     uint8_t status = read_byte(&data);
     if (!(status & 0b10000000)) {
@@ -127,7 +142,7 @@ void read_track(uint8_t *data, uint32_t data_length) {
       uint8_t channel = status & 0x0F;
       uint8_t note = read_byte(&data);
       uint8_t velocity = read_byte(&data);
-      printf("Note off: %d, vel %d\n", note, velocity);
+      // printf("Note off: %d, vel %d\n", note, velocity);
 
     } else if ((status & 0xF0) == note_on) {
       uint8_t channel = status & 0x0F;
@@ -135,9 +150,10 @@ void read_track(uint8_t *data, uint32_t data_length) {
       uint8_t velocity = read_byte(&data);
       if (velocity == 0) {
         // 21 is A0
-        printf("Note off: %d, vel: %d\n", note, velocity);
+        // printf("Note off: %d, vel: %d\n", note, velocity);
       } else {
         printf("Note on: %d, vel: %d\n", note, velocity);
+        get_note_name(note);
       }
     } else if ((status & 0xF0) == note_after_touch) {
       uint8_t channel = status & 0x0F;
