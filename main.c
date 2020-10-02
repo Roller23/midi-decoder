@@ -42,11 +42,13 @@ int main(void) {
   printf("First header name: '%4s'\n", header_chunk.name);
   printf("First header size: %d\n", header_chunk.size);
   header_chunk_data header_data = *(header_chunk_data *)header_chunk.data;
+  header_data.format = __bswap_16(header_data.format);
+  header_data.tracks = __bswap_16(header_data.tracks);
   uint8_t timing_type = !!(header_data.ticks & 0x4000); // bit 15
-  printf("Format = %d\n", (int)__bswap_16(header_data.format));
-  printf("Tracks = %d\n", (int)__bswap_16(header_data.tracks));
-  printf("Ticks = %d\n", (int)__bswap_16(header_data.ticks));
+  printf("Format = %d\n", header_data.format);
+  printf("Tracks = %d\n", header_data.tracks);
   printf("Timing type = %s\n", timing_type ? "timecode" : "metrical timing");
   fclose(zelda);
+  free(header_chunk.data);
   return 0;
 }
