@@ -1,1 +1,3 @@
-# midi-decoder
+# Midi decoder
+
+Work in progress
