@@ -4,6 +4,7 @@
 #include <byteswap.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
 
 #define CHUNK_META_LENGTH 8
 #define CHUNK_META_NAME_LENGTH 4
@@ -64,8 +65,15 @@ typedef struct {
   const char name[5];
 } note;
 
-const char *note_names[] = {
-  NULL, "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+typedef struct {
+  char name[3];
+  float base_freq;
+} note_meta;
+
+const note_meta notes_data[] = {
+  {"B", 61.74}, {"C", 32.70}, {"C#", 34.65}, {"D", 36.71},
+  {"D#", 38.89},{"E", 41.20}, {"F", 43.65}, {"F#", 46.25},
+  {"G", 49.00}, {"G#", 51.91}, {"A", 55.00}, {"A#", 58.27}
 };
 
 void read_chunk(FILE *midi_file, chunk *_chunk) {
@@ -114,13 +122,11 @@ void get_note_name(uint8_t id) {
   uint8_t piano_key = id - C1_NOTE + 1;
   uint8_t remainder = piano_key % 12;
   uint8_t level = (remainder == 0) ? (piano_key / 12) : (piano_key / 12) + 1;
-  if (remainder == 0) {
-    remainder = 12;
-  }
+  float frequency = notes_data[remainder].base_freq * pow(2, level - 1);
   char note_str[5];
   memset(note_str, 0, 5);
-  sprintf(note_str, "%s%d", note_names[remainder], level);
-  printf("Note: %s\n", note_str);
+  sprintf(note_str, "%s%d", notes_data[remainder].name, level);
+  printf("Note: %s, freq: %.2f Hz\n", note_str, frequency);
 }
 
 void read_track(uint8_t *data, uint32_t data_length) {
@@ -130,8 +136,7 @@ void read_track(uint8_t *data, uint32_t data_length) {
     uint32_t delta_time = read_value(&data);
     uint8_t status = read_byte(&data);
     if (!(status & 0b10000000)) {
-      // this file is compressed
-      // printf("Note chain\n");
+      // Handling compression
       status = previous_status;
       data--;
     }
@@ -143,7 +148,6 @@ void read_track(uint8_t *data, uint32_t data_length) {
       uint8_t note = read_byte(&data);
       uint8_t velocity = read_byte(&data);
       // printf("Note off: %d, vel %d\n", note, velocity);
-
     } else if ((status & 0xF0) == note_on) {
       uint8_t channel = status & 0x0F;
       uint8_t note = read_byte(&data);
