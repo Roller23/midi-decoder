@@ -3,7 +3,6 @@
 #include <cstring>
 #include <cmath>
 #include <vector>
-#include <byteswap.h>
 #include <string>
 #include <sstream>
 
@@ -15,18 +14,27 @@ const midiParser::note_meta midiParser::notes_data[12] = {
   {"G", 49.00}, {"G#", 51.91}, {"A", 55.00}, {"A#", 58.27}
 };
 
+std::uint16_t midiParser::bswap(std::uint16_t x) {
+  return ((x & 0xFF) << 8) | ((x & 0xFF00) >> 8);
+}
+
+std::uint32_t midiParser::bswap(std::uint32_t x) {
+  x = (x & 0x0000FFFF) << 16 | (x & 0xFFFF0000) >> 16;
+  return ((x & 0x00FF00FF) << 8 | (x & 0xFF00FF00) >> 8);
+}
+
 midiParser::midiParser(std::string midi_filename) {
   this->midi_file.open(midi_filename, std::ios::binary);
 }
 
-midiParser::~midiParser(void) {
+midiParser::~midiParser() {
   this->midi_file.close();
 }
 
 void midiParser::read_chunk(chunk *_chunk) {
   std::memset(_chunk, 0, sizeof(chunk));
   this->midi_file.read((char *)_chunk->chunk_meta, CHUNK_META_LENGTH);
-  _chunk->size = __bswap_32(_chunk->size);
+  _chunk->size = bswap(_chunk->size);
   _chunk->data = new std::uint8_t[_chunk->size];
   this->midi_file.read((char *)_chunk->data, _chunk->size);
   std::printf("Chunk name: '%.4s'\n", _chunk->name);

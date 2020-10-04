@@ -1,15 +1,14 @@
 #include <iostream>
-#include <byteswap.h>
 
 #include "midi-parser.hpp"
 
 int main(void) {
-  midiParser parser("P4Reverie.mid");
+  midiParser parser("zelda.mid");
   midiParser::chunk header_chunk;
   parser.read_chunk(&header_chunk);
   midiParser::header_chunk_data header_data = *(midiParser::header_chunk_data *)header_chunk.data;
-  header_data.format = __bswap_16(header_data.format);
-  header_data.tracks = __bswap_16(header_data.tracks);
+  header_data.format = midiParser::bswap(header_data.format);
+  header_data.tracks = midiParser::bswap(header_data.tracks);
   uint8_t timing_type = !!(header_data.ticks & 0x4000); // bit 15
   std::cout << "Format = " << header_data.format << "\n";
   std::cout << "Tracks = " << header_data.tracks << "\n";
@@ -26,7 +25,7 @@ int main(void) {
       std::cout << "Instrument: " << _track.instrument << "\n";
       std::cout << "Notes:\n";
       for (auto &note : _track.notes) {
-        std::cout << note.name << " ";
+        std::cout << note.name << ", start: " << note.start << ", duration: " << note.duration << "\n";
       }
       std::cout << std::endl;
     }

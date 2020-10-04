@@ -53,7 +53,9 @@ class midiParser {
     char *read_string(std::uint8_t **data, std::uint8_t length);
     std::uint32_t read_value(std::uint8_t **data);
     struct track read_track(std::uint8_t *data, std::uint32_t data_length);
-    ~midiParser(void);
+    static std::uint16_t bswap(std::uint16_t x);
+    static std::uint32_t bswap(std::uint32_t x);
+    ~midiParser();
   private:
     enum system_event {
       meta_sequence = 0x00,
