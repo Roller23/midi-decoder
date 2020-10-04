@@ -4,7 +4,7 @@
 #include "midi-parser.hpp"
 
 int main(void) {
-  midiParser parser("zelda.mid");
+  midiParser parser("P4Reverie.mid");
   midiParser::chunk header_chunk;
   parser.read_chunk(&header_chunk);
   midiParser::header_chunk_data header_data = *(midiParser::header_chunk_data *)header_chunk.data;
@@ -20,7 +20,16 @@ int main(void) {
     parser.read_chunk(track_chunks + i);
   }
   if (header_data.format == 1) {
-    parser.read_track(track_chunks[1].data, track_chunks[1].size);
+    for (int i = 1; i < header_data.tracks; i++) {
+      midiParser::track _track = parser.read_track(track_chunks[i].data, track_chunks[i].size);
+      std::cout << "Track name: " << _track.name << "\n";
+      std::cout << "Instrument: " << _track.instrument << "\n";
+      std::cout << "Notes:\n";
+      for (auto &note : _track.notes) {
+        std::cout << note.name << " ";
+      }
+      std::cout << std::endl;
+    }
   }
   parser.free_chunk(&header_chunk);
   return 0;

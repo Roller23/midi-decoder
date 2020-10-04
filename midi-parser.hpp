@@ -38,13 +38,21 @@ class midiParser {
       std::uint32_t duration;
       float frequency;
     };
+    struct track {
+      std::string name;
+      std::string instrument;
+      std::vector<struct note> notes;
+      void add_note(std::uint8_t id, std::uint8_t vel, std::uint8_t chan);
+      void end_note(std::uint8_t id);
+      uint32_t time_passed = 0;
+    };
     midiParser(std::string midi_filename);
     void read_chunk(chunk *_chunk);
     void free_chunk(chunk *_chunk);
     std::uint8_t read_byte(std::uint8_t **data);
-    char *read_string(std::uint8_t **data);
+    char *read_string(std::uint8_t **data, std::uint8_t length);
     std::uint32_t read_value(std::uint8_t **data);
-    void read_track(std::uint8_t *data, std::uint32_t data_length);
+    struct track read_track(std::uint8_t *data, std::uint32_t data_length);
     ~midiParser(void);
   private:
     enum system_event {
@@ -79,15 +87,8 @@ class midiParser {
       float base_freq;
     };
     std::ifstream midi_file;
-    const note_meta notes_data[12] = {
-      {"B", 61.74}, {"C", 32.70}, {"C#", 34.65}, {"D", 36.71},
-      {"D#", 38.89},{"E", 41.20}, {"F", 43.65}, {"F#", 46.25},
-      {"G", 49.00}, {"G#", 51.91}, {"A", 55.00}, {"A#", 58.27}
-    };
-    std::vector<struct note> notes;
-    uint32_t time_passed = 0;
-    void add_note(std::uint8_t id, std::uint8_t vel, std::uint8_t chan, std::uint32_t delta);
-    void end_note(std::uint8_t id, std::uint32_t delta);
+    static const struct note_meta notes_data[12];
+    uint32_t tracks = 0;
 };
 
 #endif // __MIDI_
