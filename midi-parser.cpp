@@ -2,7 +2,10 @@
 #include <cstdint>
 #include <cstring>
 #include <cmath>
+#include <vector>
 #include <byteswap.h>
+#include <string>
+#include <sstream>
 
 #include "midi-parser.hpp"
 
@@ -10,7 +13,7 @@ midiParser::midiParser(std::string midi_filename) {
   this->midi_file.open(midi_filename, std::ios::binary);
 }
 
-void midiParser::close(void) {
+midiParser::~midiParser(void) {
   this->midi_file.close();
 }
 
@@ -44,27 +47,44 @@ char *midiParser::read_string(std::uint8_t **data) {
 }
 
 std::uint32_t midiParser::read_value(std::uint8_t **data) {
-  std::uint32_t result = 0;
-  do {
-    std::uint8_t byte = read_byte(data);
-    std::uint8_t bit = (byte & 0b10000000);
-    result += (byte & 0b01111111) << 1;
-    if (bit == 0) {
-      break;
-    }
-  } while (true);
+  std::uint32_t result = read_byte(data);
+  std::uint8_t byte = 0;
+  if (result & 0b10000000) {
+    result &= 0b01111111;
+    do {
+      byte = read_byte(data);
+      result = (result << 7) | (byte & 0b01111111);
+    } while (byte & 0b10000000);
+  }
   return result;
 }
 
-void midiParser::get_note_name(std::uint8_t id) {
+void midiParser::add_note(std::uint8_t id, std::uint8_t vel, std::uint8_t chan, std::uint32_t delta) {
   std::uint8_t piano_key = id - C1_NOTE + 1;
   std::uint8_t remainder = piano_key % 12;
   std::uint8_t level = (remainder == 0) ? (piano_key / 12) : (piano_key / 12) + 1;
   float frequency = notes_data[remainder].base_freq * pow(2, level - 1);
-  char note_str[5];
-  std::memset(note_str, 0, 5);
-  std::sprintf(note_str, "%s%d", notes_data[remainder].name, level);
-  std::printf("Note: %s, freq: %.2f Hz\n", note_str, frequency);
+  std::stringstream ss;
+  ss << notes_data[remainder].name << +level;
+  std::string note_name = ss.str();
+  std::printf("Note: %s, freq: %.2f Hz\n", note_name.c_str(), frequency);
+  struct note _note = {id, vel, chan};
+  std::strcpy(_note.name, note_name.c_str());
+  _note.frequency = frequency;
+  _note.start = this->time_passed;
+  _note.duration = 0;
+  this->notes.push_back(_note);
+}
+
+void midiParser::end_note(std::uint8_t id, std::uint32_t delta) {
+  if (this->notes.size() == 0) return;
+  for (auto it = this->notes.rbegin(); it != this->notes.rend(); it++) {
+    if (it->id == id) {
+      it->duration = this->time_passed - it->start;
+      return;
+    }
+  }
+
 }
 
 void midiParser::read_track(std::uint8_t *data, std::uint32_t data_length) {
@@ -73,6 +93,7 @@ void midiParser::read_track(std::uint8_t *data, std::uint32_t data_length) {
   while (data - data_start < data_length) {
     std::uint32_t delta_time = read_value(&data);
     std::uint8_t status = read_byte(&data);
+    this->time_passed += delta_time;
     if (!(status & 0b10000000)) {
       // Handling compression
       status = previous_status;
@@ -85,17 +106,19 @@ void midiParser::read_track(std::uint8_t *data, std::uint32_t data_length) {
       std::uint8_t channel = status & 0x0F;
       std::uint8_t note = read_byte(&data);
       std::uint8_t velocity = read_byte(&data);
-      // std::cout << "Note off: " << +note << ", vel: " << +velocity << "\n";
+      std::cout << "Note off: " << +note << ", vel: " << +velocity << "\n";
+      end_note(note, delta_time);
     } else if ((status & 0xF0) == note_on) {
       std::uint8_t channel = status & 0x0F;
       std::uint8_t note = read_byte(&data);
       std::uint8_t velocity = read_byte(&data);
       if (velocity == 0) {
         // 21 is A0
-        // std::cout << "Note off: " << +note << ", vel: " << +velocity << "\n";
+        std::cout << "Note off: " << +note << ", vel: " << +velocity << "\n";
+        end_note(note, delta_time);
       } else {
         std::cout << "Note on: " << +note << ", vel: " << +velocity << "\n";
-        get_note_name(note);
+        add_note(note, velocity, channel, delta_time);
       }
     } else if ((status & 0xF0) == note_after_touch) {
       std::uint8_t channel = status & 0x0F;
@@ -139,7 +162,6 @@ void midiParser::read_track(std::uint8_t *data, std::uint32_t data_length) {
           std::cout << "Channel prefix: " << read_byte(&data) << "\n";
         } else if (meta_type == meta_eot) {
           // end of track
-          std::cout << "End of track\n";
           break;
         } else if (meta_type == meta_tempo_set) {
           // to do
@@ -165,5 +187,10 @@ void midiParser::read_track(std::uint8_t *data, std::uint32_t data_length) {
       previous_status = old_prev_status;
       std::cout << "Unknown midi status!\n";
     }
+  }
+  std::cout << "End of track\n";
+  std::cout << "Notes:\n";
+  for (auto &note : this->notes) {
+    std::cout << note.name << " s: " << +note.start << " d: " << +note.duration << "\n";
   }
 }

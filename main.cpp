@@ -23,6 +23,5 @@ int main(void) {
     parser.read_track(track_chunks[1].data, track_chunks[1].size);
   }
   parser.free_chunk(&header_chunk);
-  parser.close();
   return 0;
 }
