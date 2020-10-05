@@ -112,7 +112,7 @@ midiParser::track midiParser::read_track(std::uint8_t *data, std::uint32_t data_
     std::uint32_t delta_time = read_value(&data);
     std::uint8_t status = read_byte(&data);
     track_data.time_passed += delta_time;
-    if (!(status & 0b10000000)) {
+    if (status < 0x80) {
       // Handling compression
       status = previous_status;
       data--;
@@ -188,10 +188,13 @@ midiParser::track midiParser::read_track(std::uint8_t *data, std::uint32_t data_
           break;
         } else if (meta_type == meta_tempo_set) {
           // to do
-          std::cout << "Set tempo\n";
-          // read_byte(&data);
-          // read_byte(&data);
-          // read_byte(&data);
+          if (!track_data.tempo_set) {
+            std::cout << "Set tempo\n";
+            read_byte(&data);
+            read_byte(&data);
+            read_byte(&data);
+            track_data.tempo_set = true;
+          }
         } else if (meta_type == meta_SMPTEOffset) {
           std::printf("SMPTE: %d %d %d %d %d\n", read_byte(&data), read_byte(&data), read_byte(&data), read_byte(&data), read_byte(&data));
         } else if (meta_type == meta_time_signature) {

@@ -45,6 +45,7 @@ class midiParser {
       void add_note(std::uint8_t id, std::uint8_t vel, std::uint8_t chan);
       void end_note(std::uint8_t id);
       uint32_t time_passed = 0;
+      bool tempo_set = false;
     };
     midiParser(std::string midi_filename);
     void read_chunk(chunk *_chunk);
