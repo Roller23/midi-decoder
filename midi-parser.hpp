@@ -68,6 +68,7 @@ class midiParser {
       meta_marker = 0x06,
       meta_cue = 0x07,
       meta_channel_prefix = 0x20,
+      meta_port = 0x21,
       meta_eot = 0x2F,
       meta_tempo_set = 0x51,
       meta_SMPTEOffset = 0x54,

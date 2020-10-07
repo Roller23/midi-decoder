@@ -3,7 +3,7 @@
 #include "midi-parser.hpp"
 
 int main(void) {
-  midiParser parser("P4Reverie.mid");
+  midiParser parser("dirth.mid");
   midiParser::chunk header_chunk;
   parser.read_chunk(&header_chunk);
   midiParser::header_chunk_data header_data = *(midiParser::header_chunk_data *)header_chunk.data;

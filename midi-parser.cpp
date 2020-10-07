@@ -97,7 +97,6 @@ void midiParser::track::end_note(std::uint8_t id) {
       return;
     }
   }
-
 }
 
 midiParser::track midiParser::read_track(std::uint8_t *data, std::uint32_t data_length) {
@@ -204,6 +203,8 @@ midiParser::track midiParser::read_track(std::uint8_t *data, std::uint32_t data_
         } else if (meta_type == meta_key_signature) {
           std::cout << "Key signature: " << +read_byte(&data) << "\n";
           std::cout << "Minor key: " << +read_byte(&data) << "\n";
+        } else if (meta_type == meta_port) {
+          // to do
         } else {
           previous_status = old_prev_status;
           std::cout << "Unknown system event!\n";
