@@ -25,6 +25,13 @@ std::uint32_t midiParser::bswap(std::uint32_t x) {
 
 midiParser::midiParser(std::string midi_filename) {
   this->midi_file.open(midi_filename, std::ios::binary);
+  this->midi_file.seekg(0, this->midi_file.beg);
+  for (int i = 0; i < 50; i++) {
+    std::uint8_t byte = 0;
+    this->midi_file >> byte;
+    std::printf("%.2x ", byte);
+  }
+  this->midi_file.seekg(0, this->midi_file.beg);
 }
 
 midiParser::~midiParser() {
@@ -198,13 +205,14 @@ midiParser::track midiParser::read_track(std::uint8_t *data, std::uint32_t data_
         } else if (meta_type == meta_SMPTEOffset) {
           std::printf("SMPTE: %d %d %d %d %d\n", read_byte(&data), read_byte(&data), read_byte(&data), read_byte(&data), read_byte(&data));
         } else if (meta_type == meta_time_signature) {
-          std::cout << "Time signature: " << read_byte(&data) << "/" << (read_byte(&data) << 2) << "\n";
-          std::cout << "Clocks per tick: " << read_byte(&data) << "\n";
-          std::cout << "32 per 24 clocks: " << read_byte(&data) << "\n";
+          std::cout << "Time signature: " << +read_byte(&data) << "/" << +(2 << read_byte(&data)) << "\n";
+          std::cout << "Clocks per tick: " << +read_byte(&data) << "\n";
+          std::cout << "32 per 24 clocks: " << +read_byte(&data) << "\n";
         } else if (meta_type == meta_key_signature) {
-          std::cout << "Key signature: " << read_byte(&data) << "\n";
-          std::cout << "Minor key: " << read_byte(&data) << "\n";
+          std::cout << "Key signature: " << +read_byte(&data) << "\n";
+          std::cout << "Minor key: " << +read_byte(&data) << "\n";
         } else {
+          previous_status = old_prev_status;
           std::cout << "Unknown system event!\n";
         }
       }
