@@ -7,11 +7,6 @@ int main(void) {
   midiParser::chunk header_chunk;
   parser.read_chunk(&header_chunk);
   midiParser::header_chunk_data header_data = *(midiParser::header_chunk_data *)header_chunk.data;
-  std::cout << "DATA\n";
-  for (int i = 0; i < 6; i++) {
-    std::printf("%.2x ", header_chunk.data[i]);
-  }
-  std::cout << std::endl;
   header_data.format = midiParser::bswap(header_data.format);
   header_data.tracks = midiParser::bswap(header_data.tracks);
   uint8_t timing_type = !!(header_data.ticks & 0x4000); // bit 15

@@ -25,13 +25,6 @@ std::uint32_t midiParser::bswap(std::uint32_t x) {
 
 midiParser::midiParser(std::string midi_filename) {
   this->midi_file.open(midi_filename, std::ios::binary);
-  this->midi_file.seekg(0, this->midi_file.beg);
-  for (int i = 0; i < 50; i++) {
-    std::uint8_t byte = 0;
-    this->midi_file >> byte;
-    std::printf("%.2x ", byte);
-  }
-  this->midi_file.seekg(0, this->midi_file.beg);
 }
 
 midiParser::~midiParser() {
