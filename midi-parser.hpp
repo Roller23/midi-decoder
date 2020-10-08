@@ -11,9 +11,7 @@ class midiParser {
   private:
     static const int CHUNK_META_LENGTH = 8;
     static const int CHUNK_META_NAME_LENGTH = 4;
-    static const int MAX_NOTES_HELD = 10;
     static const int C1_NOTE = 24;
-  public:
     struct __attribute__((packed)) chunk {
       union {
         std::uint8_t chunk_meta[CHUNK_META_LENGTH];
@@ -47,15 +45,17 @@ class midiParser {
       uint32_t time_passed = 0;
       bool tempo_set = false;
     };
-    midiParser(std::string midi_filename);
-    void read_chunk(chunk *_chunk);
-    void free_chunk(chunk *_chunk);
-    std::uint8_t read_byte(std::uint8_t **data);
-    char *read_string(std::uint8_t **data, std::uint8_t length);
-    std::uint32_t read_value(std::uint8_t **data);
-    struct track read_track(std::uint8_t *data, std::uint32_t data_length);
-    static std::uint16_t bswap(std::uint16_t x);
-    static std::uint32_t bswap(std::uint32_t x);
+  public:
+    struct midi_data {
+      std::uint16_t format;
+      std::uint16_t tracks_count;
+      std::uint16_t timing;
+      std::vector <struct track> tracks;
+    };
+    midiParser();
+    struct midi_data parse_file(std::string filename);
+    bool errors = false;
+    bool verbose = false;
     ~midiParser();
   private:
     enum system_event {
@@ -90,9 +90,16 @@ class midiParser {
       char name[3];
       float base_freq;
     };
-    std::ifstream midi_file;
+    void read_chunk(std::ifstream &midi_file, chunk *_chunk);
+    void free_chunk(chunk *_chunk);
+    std::uint8_t read_byte(std::uint8_t **data);
+    char *read_string(std::uint8_t **data, std::uint8_t length);
+    std::uint32_t read_value(std::uint8_t **data);
+    struct track read_track(std::uint8_t *data, std::uint32_t data_length);
+    static std::uint16_t bswap(std::uint16_t x);
+    static std::uint32_t bswap(std::uint32_t x);
     static const struct note_meta notes_data[12];
-    uint32_t tracks = 0;
+    std::uint32_t tracks = 0;
 };
 
 #endif // __MIDI_

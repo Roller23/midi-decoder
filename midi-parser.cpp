@@ -8,6 +8,9 @@
 
 #include "midi-parser.hpp"
 
+#define LOG(cond, message)\
+  if ((cond)) std::cout << message
+
 const midiParser::note_meta midiParser::notes_data[12] = {
   {"B", 61.74}, {"C", 32.70}, {"C#", 34.65}, {"D", 36.71},
   {"D#", 38.89},{"E", 41.20}, {"F", 43.65}, {"F#", 46.25},
@@ -23,22 +26,18 @@ std::uint32_t midiParser::bswap(std::uint32_t x) {
   return ((x & 0x00FF00FF) << 8 | (x & 0xFF00FF00) >> 8);
 }
 
-midiParser::midiParser(std::string midi_filename) {
-  this->midi_file.open(midi_filename, std::ios::binary);
-}
+midiParser::midiParser() {}
 
-midiParser::~midiParser() {
-  this->midi_file.close();
-}
+midiParser::~midiParser() {}
 
-void midiParser::read_chunk(chunk *_chunk) {
+void midiParser::read_chunk(std::ifstream &midi_file, chunk *_chunk) {
   std::memset(_chunk, 0, sizeof(chunk));
-  this->midi_file.read((char *)_chunk->chunk_meta, CHUNK_META_LENGTH);
+  midi_file.read((char *)_chunk->chunk_meta, CHUNK_META_LENGTH);
   _chunk->size = bswap(_chunk->size);
   _chunk->data = new std::uint8_t[_chunk->size];
-  this->midi_file.read((char *)_chunk->data, _chunk->size);
-  std::printf("Chunk name: '%.4s'\n", _chunk->name);
-  std::cout << "Chunk size: " << _chunk->size << "\n";
+  midi_file.read((char *)_chunk->data, _chunk->size);
+  if (this->verbose) std::printf("Chunk name: '%.4s'\n", _chunk->name);
+  LOG(this->verbose, "Chunk size: " << _chunk->size << "\n");
 }
 
 void midiParser::free_chunk(chunk *_chunk) {
@@ -80,7 +79,6 @@ void midiParser::track::add_note(std::uint8_t id, std::uint8_t vel, std::uint8_t
   std::stringstream ss;
   ss << notes_data[remainder].name << +level;
   std::string note_name = ss.str();
-  // std::printf("Note: %s, freq: %.2f Hz\n", note_name.c_str(), frequency);
   struct note _note = {id, vel, chan};
   std::strcpy(_note.name, note_name.c_str());
   _note.frequency = frequency;
@@ -159,7 +157,6 @@ midiParser::track midiParser::read_track(std::uint8_t *data, std::uint32_t data_
       previous_status = 0;
       if (status == 0xF0 || status == 0xF7) {
         char *message = read_string(&data, read_byte(&data));
-        // printf("System message %s: '%s'\n", status == 0xF0 ? "begin" : "end", message);
         // std::cout << "System message " << (status == 0xF0 ? "begin '" : "end '") << message << "'\n";
         delete message;
       }
@@ -167,12 +164,13 @@ midiParser::track midiParser::read_track(std::uint8_t *data, std::uint32_t data_
         std::uint8_t meta_type = read_byte(&data);
         std::uint8_t meta_length = read_byte(&data);
         if (meta_type == meta_sequence) {
-          std::cout << "Sequence number: " << read_byte(&data) << " " << read_byte(&data) << "\n";
+          // std::cout << "Sequence number: " << read_byte(&data) << " " << read_byte(&data) << "\n";
+          for (int j = 0; j < 2; j++) read_byte(&data);
         } else if (meta_type == meta_text || meta_type == meta_copyright || meta_type == meta_trackname ||
                   meta_type == meta_instrument || meta_type == meta_lyrics || meta_type == meta_marker ||
                   meta_type == meta_cue || meta_type == meta_sequencer) {
           char *message = read_string(&data, meta_length);
-          std::cout << "Meta (type: " << +meta_type << "): " << message << "\n";
+          // std::cout << "Meta (type: " << +meta_type << "): " << message << "\n";
           if (meta_type == meta_instrument) {
             track_data.instrument = message;
           }
@@ -181,41 +179,77 @@ midiParser::track midiParser::read_track(std::uint8_t *data, std::uint32_t data_
           }
           delete message;
         } else if (meta_type == meta_channel_prefix) {
-          std::cout << "Channel prefix: " << read_byte(&data) << "\n";
+          // std::cout << "Channel prefix: " << read_byte(&data) << "\n";
+          read_byte(&data);
         } else if (meta_type == meta_eot) {
           // end of track
           break;
         } else if (meta_type == meta_tempo_set) {
           // to do
           if (!track_data.tempo_set) {
-            std::cout << "Set tempo\n";
-            read_byte(&data);
-            read_byte(&data);
-            read_byte(&data);
+            // std::cout << "Set tempo\n";
+            // read_byte(&data);
+            // read_byte(&data);
+            // read_byte(&data);
+            for (int j = 0; j < 3; j++) read_byte(&data);
             track_data.tempo_set = true;
           }
         } else if (meta_type == meta_SMPTEOffset) {
-          std::printf("SMPTE: %d %d %d %d %d\n", read_byte(&data), read_byte(&data), read_byte(&data), read_byte(&data), read_byte(&data));
+          // std::printf("SMPTE: %d %d %d %d %d\n", read_byte(&data), read_byte(&data), read_byte(&data), read_byte(&data), read_byte(&data));
+          for (int j = 0; j < 5; j++) read_byte(&data);
         } else if (meta_type == meta_time_signature) {
-          std::cout << "Time signature: " << +read_byte(&data) << "/" << +(2 << read_byte(&data)) << "\n";
-          std::cout << "Clocks per tick: " << +read_byte(&data) << "\n";
-          std::cout << "32 per 24 clocks: " << +read_byte(&data) << "\n";
+          // std::cout << "Time signature: " << +read_byte(&data) << "/" << +(2 << read_byte(&data)) << "\n";
+          // std::cout << "Clocks per tick: " << +read_byte(&data) << "\n";
+          // std::cout << "32 per 24 clocks: " << +read_byte(&data) << "\n";
+          for (int j = 0; j < 4; j++) read_byte(&data);
         } else if (meta_type == meta_key_signature) {
-          std::cout << "Key signature: " << +read_byte(&data) << "\n";
-          std::cout << "Minor key: " << +read_byte(&data) << "\n";
+          // std::cout << "Key signature: " << +read_byte(&data) << "\n";
+          // std::cout << "Minor key: " << +read_byte(&data) << "\n";
+          for (int j = 0; j < 2; j++) read_byte(&data);
         } else if (meta_type == meta_port) {
           // to do
         } else {
           previous_status = old_prev_status;
-          std::cout << "Unknown system event!\n";
+          LOG(this->errors, "Unknown system event!\n");
         }
       }
     } else {
       // unknown status!
       previous_status = old_prev_status;
-      std::cout << "Unknown midi status!\n";
+      LOG(this->errors, "Unknown midi status!\n");
     }
   }
-  std::cout << "End of track\n";
+  LOG(this->verbose, "End of track\n");
   return track_data;
+}
+
+midiParser::midi_data midiParser::parse_file(std::string filename) {
+  std::ifstream midi_file;
+  midiParser::midi_data result;
+  midi_file.open(filename, std::ios::binary);
+  if (!midi_file.is_open()) {
+    LOG(this->errors, "Couldn't open the file\n");
+    return result;
+  }
+  this->tracks = 0;
+  midiParser::chunk header_chunk;
+  read_chunk(midi_file, &header_chunk);
+  midiParser::header_chunk_data header_data = *(midiParser::header_chunk_data *)header_chunk.data;
+  header_data.format = midiParser::bswap(header_data.format);
+  header_data.tracks = midiParser::bswap(header_data.tracks);
+  result.format = header_data.format;
+  result.tracks_count = header_data.tracks;
+  result.timing = header_data.ticks;
+  midiParser::chunk *track_chunks = new midiParser::chunk[header_data.tracks];
+  for (int i = 0; i < header_data.tracks; i++) {
+    LOG(this->verbose, "Reading track chunk no. " << (i + 1) << std::endl);
+    read_chunk(midi_file, track_chunks + i);
+  }
+  for (int i = 0; i < header_data.tracks; i++) {
+    result.tracks.push_back(read_track(track_chunks[i].data, track_chunks[i].size));
+    free_chunk(track_chunks + i);
+  }
+  free_chunk(&header_chunk);
+  midi_file.close();
+  return result;
 }
