@@ -1,5 +1,4 @@
 #include <iostream>
-
 #include "midi-parser.hpp"
 
 int main(void) {

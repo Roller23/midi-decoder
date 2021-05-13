@@ -1,5 +1,5 @@
 CC=g++
-flags=-g -O0 -lm
+flags=-O3 -lm -std=c++17
 out=main
 in=main.cpp midi-parser.cpp
 
